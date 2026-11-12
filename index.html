@@ -338,6 +338,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 <div class="modal-overlay" id="modal-os-detail"><div class="modal" style="width:580px;">
   <div class="modal-header"><h3>Detalhes da OS</h3><button class="modal-close" onclick="closeModal('modal-os-detail')">&times;</button></div>
   <div class="modal-body" id="os-detail-body"></div>
+  <div class="modal-footer"><button class="btn btn-primary" onclick="printOS()">🖨️ Imprimir OS</button></div>
 </div></div>
 
 <script>
@@ -588,6 +589,93 @@ function viewOS(id){
       <div class="row total"><span>TOTAL</span><span>R$ ${money(o.Total)}</span></div>
     </div>`;
   openModal('modal-os-detail');
+  window._printOSId=id;
+}
+
+function printOS(){
+  const id=window._printOSId;if(!id)return;
+  const o=DB.ordens.find(x=>x.ID===id);if(!o)return;
+  const cli=DB.clientes.find(c=>c.ID===o.ClienteID);
+  const itens=DB.itensOS.filter(i=>i.OSID===id);
+  const totalPecas=itens.reduce((s,i)=>s+Number(i.Subtotal||0),0);
+  const maoobra=Number(o.MaoDeObra||0);
+  const desconto=Number(o.Desconto||0);
+  const frete=Number(o.Frete||0);
+
+  let pecasRows='';
+  if(itens.length){
+    pecasRows=itens.map((it,idx)=>`<tr><td>${idx+1}</td><td>${esc(it.Codigo||'')}</td><td>${esc(it.Descricao||'')}</td><td style="text-align:center">${it.Qtd}</td><td style="text-align:right">R$ ${money(it.PrecoUnit)}</td><td style="text-align:right">R$ ${money(it.Subtotal)}</td></tr>`).join('');
+  }
+
+  const w=window.open('','_blank','width=800,height=900');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>OS #${o.Num}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:30px;font-size:13px;line-height:1.5;}
+.header{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px;}
+.header h1{font-size:20px;margin-bottom:2px;}
+.header p{font-size:11px;color:#555;}
+.os-info{display:flex;justify-content:space-between;margin-bottom:14px;padding:10px;background:#f5f5f5;border-radius:4px;}
+.os-info div{font-size:12px;}
+.os-info strong{display:block;font-size:14px;}
+.section{margin-bottom:14px;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;color:#555;border-bottom:1px solid #ccc;padding-bottom:3px;margin-bottom:6px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12px;}
+.info-grid .label{color:#666;font-size:11px;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+th{background:#eee;font-size:10px;text-transform:uppercase;padding:6px 8px;text-align:left;border:1px solid #ccc;}
+td{padding:6px 8px;border:1px solid #ddd;}
+.totals{margin-top:12px;border-top:2px solid #111;padding-top:8px;}
+.totals .row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
+.totals .total{font-size:15px;font-weight:700;border-top:1px solid #111;padding-top:6px;margin-top:4px;}
+.totals .discount{color:#c00;}
+.footer{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px;text-align:center;font-size:11px;}
+.footer .line{border-top:1px solid #111;padding-top:6px;margin-top:50px;}
+@media print{body{padding:15px;}@page{margin:15mm;}}
+</style></head><body>
+<div class="header">
+  <h1>ORDEM DE SERVIÇO</h1>
+  <p>Laboratório Diesel</p>
+</div>
+<div class="os-info">
+  <div>OS Nº <strong>${o.Num}</strong></div>
+  <div>Data <strong>${formatDate(o.Data)}</strong></div>
+  <div>Status <strong>${o.Status||'Orçamento'}</strong></div>
+</div>
+<div class="section">
+  <div class="section-label">Dados do Cliente</div>
+  <div class="info-grid">
+    <div><span class="label">Nome:</span> ${cli?esc(cli.Nome):'-'}</div>
+    <div><span class="label">Telefone:</span> ${cli?esc(cli.Telefone||'-'):'-'}</div>
+    <div><span class="label">CPF/CNPJ:</span> ${cli?esc(cli.CPF_CNPJ||'-'):'-'}</div>
+    <div><span class="label">Cidade/UF:</span> ${cli?(esc(cli.Cidade||'')+' / '+esc(cli.Estado||'')):'-'}</div>
+    <div><span class="label">Veículo:</span> ${cli?esc(cli.Veiculo||'-'):'-'}</div>
+    <div><span class="label">Placa:</span> ${cli?esc(cli.Placa||'-'):'-'}</div>
+  </div>
+</div>
+<div class="section">
+  <div class="section-label">Serviço</div>
+  <div style="font-size:13px;font-weight:600;">${esc(o.Servico)}</div>
+  ${o.Descricao?'<div style="font-size:12px;margin-top:4px;color:#333;">'+esc(o.Descricao)+'</div>':''}
+</div>
+${itens.length?`<div class="section">
+  <div class="section-label">Peças / Materiais</div>
+  <table><thead><tr><th>#</th><th>Código</th><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor Un.</th><th style="text-align:right">Total</th></tr></thead><tbody>${pecasRows}</tbody></table>
+</div>`:''}
+<div class="totals">
+  <div class="row"><span>Peças / Materiais</span><span>R$ ${money(totalPecas)}</span></div>
+  <div class="row"><span>Mão de Obra</span><span>R$ ${money(maoobra)}</span></div>
+  <div class="row"><span>Frete</span><span>R$ ${money(frete)}</span></div>
+  ${desconto>0?'<div class="row discount"><span>Desconto</span><span>- R$ '+money(desconto)+'</span></div>':''}
+  <div class="row total"><span>TOTAL</span><span>R$ ${money(o.Total)}</span></div>
+</div>
+<div class="footer">
+  <div><div class="line">Responsável Técnico</div></div>
+  <div><div class="line">Cliente</div></div>
+</div>
+</body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.print();},300);
 }
 
 async function delOS(id){
