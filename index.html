@@ -154,6 +154,10 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 .os-pecas-header span { font-size: 10px; text-transform: uppercase; color: var(--text2); font-weight: 600; letter-spacing: 0.5px; }
 .os-item-row { display: grid; grid-template-columns: 2fr 60px 90px 90px 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
 .os-item-row select, .os-item-row input { padding: 7px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
+.os-servicos-header { display: grid; grid-template-columns: 3fr 100px 30px; gap: 6px; margin-bottom: 4px; padding: 0 2px; }
+.os-servicos-header span { font-size: 10px; text-transform: uppercase; color: var(--text2); font-weight: 600; letter-spacing: 0.5px; }
+.os-servico-row { display: grid; grid-template-columns: 3fr 100px 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
+.os-servico-row input { padding: 7px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
 .os-totals { margin-top: 12px; padding: 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
 .os-totals .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
 .os-totals .row.total { font-size: 16px; font-weight: 700; padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--border); }
@@ -180,8 +184,9 @@ tr:hover td { background: rgba(59,130,246,0.03); }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
   .config-bar input { max-width: 200px; }
-  .os-pecas-header { display: none; }
+  .os-pecas-header, .os-servicos-header { display: none; }
   .os-item-row { grid-template-columns: 1fr; }
+  .os-servico-row { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -288,9 +293,13 @@ tr:hover td { background: rgba(59,130,246,0.03); }
     <div id="os-pecas"></div>
     <button class="btn btn-ghost btn-sm" onclick="addOSPeca()" style="margin-top:4px;">+ Adicionar peça</button>
 
-    <div class="section-title">Valores</div>
-    <div class="form-row-3">
-      <div class="form-group"><label>Mão de Obra (R$)</label><input type="number" step="0.01" id="os-maoobra" value="0" oninput="calcOSTotal()"></div>
+    <div class="section-title">Mão de Obra / Serviços</div>
+    <div class="os-servicos-header"><span>Descrição do Serviço</span><span>Valor (R$)</span><span></span></div>
+    <div id="os-servicos"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addOSServico()" style="margin-top:4px;">+ Adicionar serviço</button>
+
+    <div class="section-title">Outros Valores</div>
+    <div class="form-row">
       <div class="form-group"><label>Desconto (R$)</label><input type="number" step="0.01" id="os-desconto" value="0" oninput="calcOSTotal()"></div>
       <div class="form-group"><label>Frete (R$)</label><input type="number" step="0.01" id="os-frete" value="0" oninput="calcOSTotal()"></div>
     </div>
@@ -342,7 +351,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 </div></div>
 
 <script>
-let DB={clientes:[],ordens:[],estoque:[],vendas:[],itensVenda:[],itensOS:[]};
+let DB={clientes:[],ordens:[],estoque:[],vendas:[],itensVenda:[],itensOS:[],servicosOS:[]};
 function getApiUrl(){return localStorage.getItem('apiUrl')||'';}
 function saveApiUrl(){localStorage.setItem('apiUrl',document.getElementById('api-url').value.trim());toast('URL salva','success');testConnection();}
 function isOnline(){return !!getApiUrl();}
@@ -369,8 +378,8 @@ async function syncAll(){
   if(!isOnline()){loadLocal();renderAll();return;}
   showLoading();
   try{
-    const[c,o,e,v,iv,io]=await Promise.all([api({action:'getAll',sheet:'Clientes'}),api({action:'getAll',sheet:'Ordens'}),api({action:'getAll',sheet:'Estoque'}),api({action:'getAll',sheet:'Vendas'}),api({action:'getAll',sheet:'ItensVenda'}),api({action:'getAll',sheet:'ItensOS'})]);
-    DB.clientes=Array.isArray(c)?c:[];DB.ordens=Array.isArray(o)?o:[];DB.estoque=Array.isArray(e)?e:[];DB.vendas=Array.isArray(v)?v:[];DB.itensVenda=Array.isArray(iv)?iv:[];DB.itensOS=Array.isArray(io)?io:[];
+    const[c,o,e,v,iv,io,so]=await Promise.all([api({action:'getAll',sheet:'Clientes'}),api({action:'getAll',sheet:'Ordens'}),api({action:'getAll',sheet:'Estoque'}),api({action:'getAll',sheet:'Vendas'}),api({action:'getAll',sheet:'ItensVenda'}),api({action:'getAll',sheet:'ItensOS'}),api({action:'getAll',sheet:'ServicosOS'}).catch(()=>[])]);
+    DB.clientes=Array.isArray(c)?c:[];DB.ordens=Array.isArray(o)?o:[];DB.estoque=Array.isArray(e)?e:[];DB.vendas=Array.isArray(v)?v:[];DB.itensVenda=Array.isArray(iv)?iv:[];DB.itensOS=Array.isArray(io)?io:[];DB.servicosOS=Array.isArray(so)?so:[];
     saveLocal();document.getElementById('conn-status').textContent='● Conectado';document.getElementById('conn-status').className='status ok';
   }catch(e){toast('Erro sync: '+e.message,'error');loadLocal();}
   finally{hideLoading();renderAll();}
@@ -378,7 +387,7 @@ async function syncAll(){
 
 function renderAll(){renderDashboard();}
 function saveLocal(){localStorage.setItem('labDieselDB',JSON.stringify(DB));}
-function loadLocal(){try{const d=JSON.parse(localStorage.getItem('labDieselDB'));if(d){DB={...DB,...d};if(!DB.itensOS)DB.itensOS=[];}}catch{}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem('labDieselDB'));if(d){DB={...DB,...d};if(!DB.itensOS)DB.itensOS=[];if(!DB.servicosOS)DB.servicosOS=[];}}catch{}}
 
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function money(v){return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -428,8 +437,10 @@ async function delCliente(id){if(!confirm('Excluir este cliente?'))return;showLo
 function openModalOS(){
   clearForm('os');document.getElementById('modal-os-title').textContent='Nova Ordem de Serviço';
   document.getElementById('os-data').value=today();populateClienteSelect('os-cliente');
-  document.getElementById('os-maoobra').value='0';document.getElementById('os-desconto').value='0';document.getElementById('os-frete').value='0';
-  document.getElementById('os-pecas').innerHTML='';addOSPeca();calcOSTotal();
+  document.getElementById('os-desconto').value='0';document.getElementById('os-frete').value='0';
+  document.getElementById('os-pecas').innerHTML='';addOSPeca();
+  document.getElementById('os-servicos').innerHTML='';addOSServico();
+  calcOSTotal();
   openModal('modal-os');
 }
 
@@ -444,6 +455,24 @@ function addOSPeca(){
   div.appendChild(row);
 }
 
+function addOSServico(){
+  const div=document.getElementById('os-servicos');const row=document.createElement('div');
+  row.className='os-servico-row';
+  row.innerHTML=`<input type="text" class="osv-desc" placeholder="Ex: Regulagem de bico CRIN"><input type="number" step="0.01" class="osv-valor" value="0" oninput="calcOSTotal()" placeholder="Valor"><button onclick="this.parentElement.remove();calcOSTotal();" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;">&times;</button>`;
+  div.appendChild(row);
+}
+
+function getOSServicos(){
+  const servicos=[];
+  document.querySelectorAll('#os-servicos .os-servico-row').forEach(row=>{
+    const desc=row.querySelector('.osv-desc').value.trim();
+    const valor=parseFloat(row.querySelector('.osv-valor').value)||0;
+    if(!desc&&valor<=0)return;
+    servicos.push({Descricao:desc,Valor:valor});
+  });
+  return servicos;
+}
+
 function calcOSTotal(){
   let totalPecas=0;
   document.querySelectorAll('#os-pecas .os-item-row').forEach(row=>{
@@ -453,12 +482,15 @@ function calcOSTotal(){
     row.querySelector('.osp-sub').textContent='R$ '+money(sub);
     totalPecas+=sub;
   });
-  const maoobra=parseFloat(document.getElementById('os-maoobra').value)||0;
+  let totalMaoObra=0;
+  document.querySelectorAll('#os-servicos .os-servico-row').forEach(row=>{
+    totalMaoObra+=parseFloat(row.querySelector('.osv-valor').value)||0;
+  });
   const desconto=parseFloat(document.getElementById('os-desconto').value)||0;
   const frete=parseFloat(document.getElementById('os-frete').value)||0;
-  const total=totalPecas+maoobra+frete-desconto;
+  const total=totalPecas+totalMaoObra+frete-desconto;
   document.getElementById('os-total-pecas').textContent='R$ '+money(totalPecas);
-  document.getElementById('os-total-maoobra').textContent='R$ '+money(maoobra);
+  document.getElementById('os-total-maoobra').textContent='R$ '+money(totalMaoObra);
   document.getElementById('os-total-frete').textContent='R$ '+money(frete);
   document.getElementById('os-total-desconto').textContent='- R$ '+money(desconto);
   document.getElementById('os-total').textContent='R$ '+money(Math.max(0,total));
@@ -481,8 +513,9 @@ async function saveOS(){
   const editId=document.getElementById('os-id').value;
   const num=editId?(DB.ordens.find(o=>o.ID===editId)||{}).Num:DB.ordens.reduce((m,o)=>Math.max(m,Number(o.Num)||0),0)+1;
   const pecas=getOSPecas();
+  const servicos=getOSServicos();
   const totalPecas=pecas.reduce((s,p)=>s+p.Subtotal,0);
-  const maoobra=parseFloat(document.getElementById('os-maoobra').value)||0;
+  const maoobra=servicos.reduce((s,sv)=>s+sv.Valor,0);
   const desconto=parseFloat(document.getElementById('os-desconto').value)||0;
   const frete=parseFloat(document.getElementById('os-frete').value)||0;
   const total=Math.max(0,totalPecas+maoobra+frete-desconto);
@@ -497,21 +530,20 @@ async function saveOS(){
     if(isOnline()){
       if(editId){
         await api({action:'update',sheet:'Ordens'},obj);
-        // Remove itens antigos e adiciona novos
-        const oldItens=DB.itensOS.filter(i=>i.OSID===editId);
-        for(const oi of oldItens){await api({action:'delete',sheet:'ItensOS',id:oi.OSID+'_'+oi.ItemID}).catch(()=>{});}
-        // Deleta todos itens da OS na planilha
         try{await api({action:'deleteByOS',sheet:'ItensOS',osId:editId});}catch{}
+        try{await api({action:'deleteByOS',sheet:'ServicosOS',osId:editId});}catch{}
       }else{
         await api({action:'add',sheet:'Ordens'},obj);
       }
-      // Adiciona itens
       for(const p of pecas){await api({action:'add',sheet:'ItensOS'},{OSID:obj.ID,...p});}
+      for(const sv of servicos){await api({action:'add',sheet:'ServicosOS'},{OSID:obj.ID,...sv});}
     }
 
     const idx=DB.ordens.findIndex(o=>o.ID===obj.ID);if(idx>=0)DB.ordens[idx]=obj;else DB.ordens.push(obj);
     DB.itensOS=DB.itensOS.filter(i=>i.OSID!==obj.ID);
     pecas.forEach(p=>DB.itensOS.push({OSID:obj.ID,...p}));
+    DB.servicosOS=DB.servicosOS.filter(s=>s.OSID!==obj.ID);
+    servicos.forEach(sv=>DB.servicosOS.push({OSID:obj.ID,...sv}));
     saveLocal();closeModal('modal-os');renderOrdens();toast('OS salva','success');
   }catch(e){toast('Erro: '+e.message,'error');}finally{hideLoading();}
 }
@@ -536,7 +568,6 @@ function editOS(id){
   document.getElementById('os-servico').value=o.Servico;
   document.getElementById('os-desc').value=o.Descricao||'';
   document.getElementById('os-status').value=o.Status||'Orçamento';
-  document.getElementById('os-maoobra').value=o.MaoDeObra||0;
   document.getElementById('os-desconto').value=o.Desconto||0;
   document.getElementById('os-frete').value=o.Frete||0;
   // Carregar peças da OS
@@ -552,6 +583,18 @@ function editOS(id){
       row.querySelector('.osp-preco').value=it.PrecoUnit;
     });
   }else{addOSPeca();}
+  // Carregar serviços da OS
+  document.getElementById('os-servicos').innerHTML='';
+  const svcs=DB.servicosOS.filter(s=>s.OSID===id);
+  if(svcs.length){
+    svcs.forEach(sv=>{
+      addOSServico();
+      const rows=document.querySelectorAll('#os-servicos .os-servico-row');
+      const row=rows[rows.length-1];
+      row.querySelector('.osv-desc').value=sv.Descricao||'';
+      row.querySelector('.osv-valor').value=sv.Valor||0;
+    });
+  }else{addOSServico();}
   calcOSTotal();
   openModal('modal-os');
 }
@@ -560,14 +603,20 @@ function viewOS(id){
   const o=DB.ordens.find(x=>x.ID===id);if(!o)return;
   const cli=DB.clientes.find(c=>c.ID===o.ClienteID);
   const itens=DB.itensOS.filter(i=>i.OSID===id);
+  const svcs=DB.servicosOS.filter(s=>s.OSID===id);
   const totalPecas=itens.reduce((s,i)=>s+Number(i.Subtotal||0),0);
-  const maoobra=Number(o.MaoDeObra||0);
+  const totalMaoObra=svcs.length?svcs.reduce((s,sv)=>s+Number(sv.Valor||0),0):Number(o.MaoDeObra||0);
   const desconto=Number(o.Desconto||0);
   const frete=Number(o.Frete||0);
 
   let itensHtml='';
   if(itens.length){
     itensHtml=`<div class="detail-full"><span class="detail-label">Peças Utilizadas</span><table class="detail-items-table table-wrap"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd</th><th>Preço Un.</th><th>Subtotal</th></tr></thead><tbody>${itens.map(i=>`<tr><td>${esc(i.Codigo||'')}</td><td>${esc(i.Descricao||'')}</td><td>${i.Qtd}</td><td>R$ ${money(i.PrecoUnit)}</td><td>R$ ${money(i.Subtotal)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  let svcsHtml='';
+  if(svcs.length){
+    svcsHtml=`<div class="detail-full"><span class="detail-label">Mão de Obra / Serviços</span><table class="detail-items-table table-wrap"><thead><tr><th style="width:80%">Descrição do Serviço</th><th>Valor</th></tr></thead><tbody>${svcs.map(sv=>`<tr><td>${esc(sv.Descricao||'')}</td><td>R$ ${money(sv.Valor)}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
   document.getElementById('os-detail-body').innerHTML=`
@@ -580,10 +629,11 @@ function viewOS(id){
       ${o.Descricao?'<div class="detail-full"><span class="detail-label">Descrição</span>'+esc(o.Descricao)+'</div>':''}
       ${cli?'<div class="detail-full"><span class="detail-label">Veículo</span>'+(esc(cli.Veiculo||'-'))+(cli.Placa?' ('+esc(cli.Placa)+')':'')+'</div>':''}
       ${itensHtml}
+      ${svcsHtml}
     </div>
     <div class="os-totals" style="margin-top:16px;">
       <div class="row"><span>Peças</span><span>R$ ${money(totalPecas)}</span></div>
-      <div class="row"><span>Mão de Obra</span><span>R$ ${money(maoobra)}</span></div>
+      <div class="row"><span>Mão de Obra</span><span>R$ ${money(totalMaoObra)}</span></div>
       <div class="row"><span>Frete</span><span>R$ ${money(frete)}</span></div>
       ${desconto>0?'<div class="row discount"><span>Desconto</span><span>- R$ '+money(desconto)+'</span></div>':''}
       <div class="row total"><span>TOTAL</span><span>R$ ${money(o.Total)}</span></div>
@@ -597,14 +647,20 @@ function printOS(){
   const o=DB.ordens.find(x=>x.ID===id);if(!o)return;
   const cli=DB.clientes.find(c=>c.ID===o.ClienteID);
   const itens=DB.itensOS.filter(i=>i.OSID===id);
+  const svcs=DB.servicosOS.filter(s=>s.OSID===id);
   const totalPecas=itens.reduce((s,i)=>s+Number(i.Subtotal||0),0);
-  const maoobra=Number(o.MaoDeObra||0);
+  const totalMaoObra=svcs.length?svcs.reduce((s,sv)=>s+Number(sv.Valor||0),0):Number(o.MaoDeObra||0);
   const desconto=Number(o.Desconto||0);
   const frete=Number(o.Frete||0);
 
   let pecasRows='';
   if(itens.length){
     pecasRows=itens.map((it,idx)=>`<tr><td>${idx+1}</td><td>${esc(it.Codigo||'')}</td><td>${esc(it.Descricao||'')}</td><td style="text-align:center">${it.Qtd}</td><td style="text-align:right">R$ ${money(it.PrecoUnit)}</td><td style="text-align:right">R$ ${money(it.Subtotal)}</td></tr>`).join('');
+  }
+
+  let svcsRows='';
+  if(svcs.length){
+    svcsRows=svcs.map((sv,idx)=>`<tr><td>${idx+1}</td><td>${esc(sv.Descricao||'')}</td><td style="text-align:right">R$ ${money(sv.Valor)}</td></tr>`).join('');
   }
 
   const w=window.open('','_blank','width=800,height=900');
@@ -662,9 +718,13 @@ ${itens.length?`<div class="section">
   <div class="section-label">Peças / Materiais</div>
   <table><thead><tr><th>#</th><th>Código</th><th>Descrição</th><th style="text-align:center">Qtd</th><th style="text-align:right">Valor Un.</th><th style="text-align:right">Total</th></tr></thead><tbody>${pecasRows}</tbody></table>
 </div>`:''}
+${svcs.length?`<div class="section">
+  <div class="section-label">Mão de Obra / Serviços</div>
+  <table><thead><tr><th>#</th><th>Descrição do Serviço</th><th style="text-align:right">Valor</th></tr></thead><tbody>${svcsRows}</tbody></table>
+</div>`:''}
 <div class="totals">
   <div class="row"><span>Peças / Materiais</span><span>R$ ${money(totalPecas)}</span></div>
-  <div class="row"><span>Mão de Obra</span><span>R$ ${money(maoobra)}</span></div>
+  <div class="row"><span>Mão de Obra</span><span>R$ ${money(totalMaoObra)}</span></div>
   <div class="row"><span>Frete</span><span>R$ ${money(frete)}</span></div>
   ${desconto>0?'<div class="row discount"><span>Desconto</span><span>- R$ '+money(desconto)+'</span></div>':''}
   <div class="row total"><span>TOTAL</span><span>R$ ${money(o.Total)}</span></div>
@@ -681,8 +741,8 @@ ${itens.length?`<div class="section">
 async function delOS(id){
   if(!confirm('Excluir esta OS?'))return;showLoading();
   try{
-    if(isOnline()){await api({action:'delete',sheet:'Ordens',id});try{await api({action:'deleteByOS',sheet:'ItensOS',osId:id});}catch{}}
-    DB.ordens=DB.ordens.filter(o=>o.ID!==id);DB.itensOS=DB.itensOS.filter(i=>i.OSID!==id);
+    if(isOnline()){await api({action:'delete',sheet:'Ordens',id});try{await api({action:'deleteByOS',sheet:'ItensOS',osId:id});}catch{}try{await api({action:'deleteByOS',sheet:'ServicosOS',osId:id});}catch{}}
+    DB.ordens=DB.ordens.filter(o=>o.ID!==id);DB.itensOS=DB.itensOS.filter(i=>i.OSID!==id);DB.servicosOS=DB.servicosOS.filter(s=>s.OSID!==id);
     saveLocal();renderOrdens();toast('OS excluída','success');
   }catch(e){toast('Erro: '+e.message,'error');}finally{hideLoading();}
 }
