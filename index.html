@@ -150,6 +150,8 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 .dash-list-item:last-child { border-bottom: none; }
 
 .section-title { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.os-pecas-header { display: grid; grid-template-columns: 2fr 60px 90px 90px 30px; gap: 6px; margin-bottom: 4px; padding: 0 2px; }
+.os-pecas-header span { font-size: 10px; text-transform: uppercase; color: var(--text2); font-weight: 600; letter-spacing: 0.5px; }
 .os-item-row { display: grid; grid-template-columns: 2fr 60px 90px 90px 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
 .os-item-row select, .os-item-row input { padding: 7px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; }
 .os-totals { margin-top: 12px; padding: 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
@@ -159,9 +161,16 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px; }
 .detail-label { color: var(--text2); font-size: 11px; display: block; }
 .detail-full { grid-column: 1 / -1; }
-.detail-items-table { width: 100%; font-size: 12px; margin-top: 6px; }
-.detail-items-table th { padding: 6px 8px; font-size: 10px; }
-.detail-items-table td { padding: 6px 8px; font-size: 12px; }
+.detail-items-table { width: 100%; font-size: 12px; margin-top: 6px; border-collapse: collapse; }
+.detail-items-table th { padding: 8px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); background: var(--bg); text-align: left; border-bottom: 1px solid var(--border); }
+.detail-items-table td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid var(--border); }
+.detail-items-table tr:last-child td { border-bottom: none; }
+.detail-items-table td:nth-child(3),
+.detail-items-table td:nth-child(4),
+.detail-items-table td:nth-child(5),
+.detail-items-table th:nth-child(3),
+.detail-items-table th:nth-child(4),
+.detail-items-table th:nth-child(5) { text-align: right; }
 
 @media (max-width: 768px) {
   .sidebar { width: 60px; top: 44px; }
@@ -171,6 +180,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
   .dash-grid { grid-template-columns: 1fr; }
   .config-bar input { max-width: 200px; }
+  .os-pecas-header { display: none; }
   .os-item-row { grid-template-columns: 1fr; }
 }
 </style>
@@ -228,7 +238,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
         <option value="">Todos</option><option value="Orçamento">Orçamento</option><option value="Em andamento">Em andamento</option><option value="Pronta">Pronta</option>
       </select>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Serviço</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody id="tbody-ordens"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Serviço</th><th>Peças</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody id="tbody-ordens"></tbody></table></div>
   </div>
 
   <!-- ESTOQUE -->
@@ -274,6 +284,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
     <div class="form-group"><label>Descrição</label><textarea id="os-desc" placeholder="Detalhes do serviço..."></textarea></div>
 
     <div class="section-title">Peças Utilizadas</div>
+    <div class="os-pecas-header"><span>Peça</span><span>Qtd</span><span>Valor Un.</span><span>Total</span><span></span></div>
     <div id="os-pecas"></div>
     <button class="btn btn-ghost btn-sm" onclick="addOSPeca()" style="margin-top:4px;">+ Adicionar peça</button>
 
@@ -510,8 +521,8 @@ function renderOrdens(){
   if(q)data=data.filter(o=>{const cli=DB.clientes.find(c=>c.ID===o.ClienteID);return(cli&&cli.Nome.toLowerCase().includes(q))||(o.Servico||'').toLowerCase().includes(q)||String(o.Num||'').includes(q);});
   data.sort((a,b)=>Number(b.Num||0)-Number(a.Num||0));
   const tb=document.getElementById('tbody-ordens');
-  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty-state">Nenhuma OS encontrada</td></tr>';return;}
-  tb.innerHTML=data.map(o=>{const cli=DB.clientes.find(c=>c.ID===o.ClienteID);return`<tr><td><strong>${o.Num||'-'}</strong></td><td>${formatDate(o.Data)}</td><td>${cli?esc(cli.Nome):'-'}</td><td>${esc(o.Servico||'-')}</td><td><span class="badge ${statusBadge(o.Status)}">${o.Status||'Orçamento'}</span></td><td>R$ ${money(o.Total)}</td><td class="actions"><button class="btn btn-ghost btn-sm" onclick="viewOS('${o.ID}')">Ver</button><button class="btn btn-ghost btn-sm" onclick="editOS('${o.ID}')">Editar</button><button class="btn btn-danger btn-sm" onclick="delOS('${o.ID}')">Excluir</button></td></tr>`;}).join('');
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" class="empty-state">Nenhuma OS encontrada</td></tr>';return;}
+  tb.innerHTML=data.map(o=>{const cli=DB.clientes.find(c=>c.ID===o.ClienteID);const itens=DB.itensOS.filter(i=>i.OSID===o.ID);const pecasInfo=itens.length?itens.map(i=>`${esc(i.Descricao||i.Codigo)} (${i.Qtd}x R$ ${money(i.PrecoUnit)})`).join('<br>'):'<span style="color:var(--text2)">—</span>';return`<tr><td><strong>${o.Num||'-'}</strong></td><td>${formatDate(o.Data)}</td><td>${cli?esc(cli.Nome):'-'}</td><td>${esc(o.Servico||'-')}</td><td style="font-size:11px;">${pecasInfo}</td><td><span class="badge ${statusBadge(o.Status)}">${o.Status||'Orçamento'}</span></td><td>R$ ${money(o.Total)}</td><td class="actions"><button class="btn btn-ghost btn-sm" onclick="viewOS('${o.ID}')">Ver</button><button class="btn btn-ghost btn-sm" onclick="editOS('${o.ID}')">Editar</button><button class="btn btn-danger btn-sm" onclick="delOS('${o.ID}')">Excluir</button></td></tr>`;}).join('');
 }
 
 function editOS(id){
