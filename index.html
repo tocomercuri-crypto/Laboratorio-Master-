@@ -211,6 +211,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
     <div class="nav-item" onclick="showPage('ordens')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Ordens de Serviço</span></div>
     <div class="nav-item" onclick="showPage('estoque')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span>Estoque</span></div>
     <div class="nav-item" onclick="showPage('vendas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Vendas</span></div>
+    <div class="nav-item" onclick="showPage('despesas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>Despesas</span></div>
   </nav>
 </div>
 
@@ -258,6 +259,22 @@ tr:hover td { background: rgba(59,130,246,0.03); }
     <div class="page-header"><h1>Controle de Vendas</h1><button class="btn btn-primary" onclick="openModalVenda()">+ Nova Venda</button></div>
     <div class="search-bar"><input type="text" id="search-vendas" placeholder="Buscar venda..." oninput="renderVendas()"></div>
     <div class="table-wrap"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Itens</th><th>Total</th><th>Ações</th></tr></thead><tbody id="tbody-vendas"></tbody></table></div>
+  </div>
+
+  <!-- DESPESAS -->
+  <div id="page-despesas" class="page">
+    <div class="page-header"><h1>Compras e Despesas</h1><button class="btn btn-primary" onclick="openModalDespesa()">+ Nova Despesa</button></div>
+    <div class="search-bar">
+      <input type="text" id="search-despesas" placeholder="Buscar despesa..." oninput="renderDespesas()">
+      <select id="filter-cat-desp" onchange="renderDespesas()" style="padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+        <option value="">Todas Categorias</option><option>Peças/Materiais</option><option>Ferramentas</option><option>Combustível</option><option>Aluguel</option><option>Energia</option><option>Água</option><option>Telefone/Internet</option><option>Manutenção</option><option>Salários</option><option>Impostos</option><option>Outros</option>
+      </select>
+      <select id="filter-mes-desp" onchange="renderDespesas()" style="padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;">
+        <option value="">Todos os Meses</option>
+      </select>
+    </div>
+    <div class="stats-row" id="desp-stats"></div>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Fornecedor</th><th>Pagamento</th><th>Valor</th><th>Ações</th></tr></thead><tbody id="tbody-despesas"></tbody></table></div>
   </div>
 </div>
 
@@ -343,6 +360,26 @@ tr:hover td { background: rgba(59,130,246,0.03); }
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-venda')">Cancelar</button><button class="btn btn-primary" onclick="saveVenda()">Registrar Venda</button></div>
 </div></div>
 
+<!-- MODAL DESPESA -->
+<div class="modal-overlay" id="modal-despesa"><div class="modal">
+  <div class="modal-header"><h3 id="modal-despesa-title">Nova Despesa</h3><button class="modal-close" onclick="closeModal('modal-despesa')">&times;</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="desp-id">
+    <div class="form-row">
+      <div class="form-group"><label>Data</label><input type="date" id="desp-data"></div>
+      <div class="form-group"><label>Categoria</label><select id="desp-cat"><option>Peças/Materiais</option><option>Ferramentas</option><option>Combustível</option><option>Aluguel</option><option>Energia</option><option>Água</option><option>Telefone/Internet</option><option>Manutenção</option><option>Salários</option><option>Impostos</option><option>Outros</option></select></div>
+    </div>
+    <div class="form-group"><label>Descrição</label><input id="desp-desc" placeholder="Ex: Compra de bicos injetores CRIN"></div>
+    <div class="form-group"><label>Fornecedor</label><input id="desp-fornecedor" placeholder="Ex: Distribuidora Diesel"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Valor (R$)</label><input type="number" step="0.01" id="desp-valor" placeholder="0,00"></div>
+      <div class="form-group"><label>Forma de Pagamento</label><select id="desp-pagamento"><option>Dinheiro</option><option>PIX</option><option>Cartão</option><option>Boleto</option><option>Transferência</option></select></div>
+    </div>
+    <div class="form-group"><label>Observações</label><textarea id="desp-obs" placeholder="Notas adicionais..."></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-despesa')">Cancelar</button><button class="btn btn-primary" onclick="saveDespesa()">Salvar</button></div>
+</div></div>
+
 <!-- MODAL DETALHE OS -->
 <div class="modal-overlay" id="modal-os-detail"><div class="modal" style="width:580px;">
   <div class="modal-header"><h3>Detalhes da OS</h3><button class="modal-close" onclick="closeModal('modal-os-detail')">&times;</button></div>
@@ -351,7 +388,7 @@ tr:hover td { background: rgba(59,130,246,0.03); }
 </div></div>
 
 <script>
-let DB={clientes:[],ordens:[],estoque:[],vendas:[],itensVenda:[],itensOS:[],servicosOS:[]};
+let DB={clientes:[],ordens:[],estoque:[],vendas:[],itensVenda:[],itensOS:[],servicosOS:[],despesas:[]};
 function getApiUrl(){return localStorage.getItem('apiUrl')||'';}
 function saveApiUrl(){localStorage.setItem('apiUrl',document.getElementById('api-url').value.trim());toast('URL salva','success');testConnection();}
 function isOnline(){return !!getApiUrl();}
@@ -378,8 +415,8 @@ async function syncAll(){
   if(!isOnline()){loadLocal();renderAll();return;}
   showLoading();
   try{
-    const[c,o,e,v,iv,io,so]=await Promise.all([api({action:'getAll',sheet:'Clientes'}),api({action:'getAll',sheet:'Ordens'}),api({action:'getAll',sheet:'Estoque'}),api({action:'getAll',sheet:'Vendas'}),api({action:'getAll',sheet:'ItensVenda'}),api({action:'getAll',sheet:'ItensOS'}),api({action:'getAll',sheet:'ServicosOS'}).catch(()=>[])]);
-    DB.clientes=Array.isArray(c)?c:[];DB.ordens=Array.isArray(o)?o:[];DB.estoque=Array.isArray(e)?e:[];DB.vendas=Array.isArray(v)?v:[];DB.itensVenda=Array.isArray(iv)?iv:[];DB.itensOS=Array.isArray(io)?io:[];DB.servicosOS=Array.isArray(so)?so:[];
+    const[c,o,e,v,iv,io,so,dp]=await Promise.all([api({action:'getAll',sheet:'Clientes'}),api({action:'getAll',sheet:'Ordens'}),api({action:'getAll',sheet:'Estoque'}),api({action:'getAll',sheet:'Vendas'}),api({action:'getAll',sheet:'ItensVenda'}),api({action:'getAll',sheet:'ItensOS'}),api({action:'getAll',sheet:'ServicosOS'}).catch(()=>[]),api({action:'getAll',sheet:'Despesas'}).catch(()=>[])]);
+    DB.clientes=Array.isArray(c)?c:[];DB.ordens=Array.isArray(o)?o:[];DB.estoque=Array.isArray(e)?e:[];DB.vendas=Array.isArray(v)?v:[];DB.itensVenda=Array.isArray(iv)?iv:[];DB.itensOS=Array.isArray(io)?io:[];DB.servicosOS=Array.isArray(so)?so:[];DB.despesas=Array.isArray(dp)?dp:[];
     saveLocal();document.getElementById('conn-status').textContent='● Conectado';document.getElementById('conn-status').className='status ok';
   }catch(e){toast('Erro sync: '+e.message,'error');loadLocal();}
   finally{hideLoading();renderAll();}
@@ -387,7 +424,7 @@ async function syncAll(){
 
 function renderAll(){renderDashboard();}
 function saveLocal(){localStorage.setItem('labDieselDB',JSON.stringify(DB));}
-function loadLocal(){try{const d=JSON.parse(localStorage.getItem('labDieselDB'));if(d){DB={...DB,...d};if(!DB.itensOS)DB.itensOS=[];if(!DB.servicosOS)DB.servicosOS=[];}}catch{}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem('labDieselDB'));if(d){DB={...DB,...d};if(!DB.itensOS)DB.itensOS=[];if(!DB.servicosOS)DB.servicosOS=[];if(!DB.despesas)DB.despesas=[];}}catch{}}
 
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function money(v){return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -403,8 +440,8 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item')[['dashboard','clientes','ordens','estoque','vendas'].indexOf(id)].classList.add('active');
-  ({dashboard:renderDashboard,clientes:renderClientes,ordens:renderOrdens,estoque:renderEstoque,vendas:renderVendas})[id]();
+  document.querySelectorAll('.nav-item')[['dashboard','clientes','ordens','estoque','vendas','despesas'].indexOf(id)].classList.add('active');
+  ({dashboard:renderDashboard,clientes:renderClientes,ordens:renderOrdens,estoque:renderEstoque,vendas:renderVendas,despesas:renderDespesas})[id]();
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -804,6 +841,73 @@ function renderVendas(){
 }
 async function delVenda(id){if(!confirm('Excluir esta venda?'))return;showLoading();try{if(isOnline())await api({action:'delete',sheet:'Vendas',id});DB.vendas=DB.vendas.filter(v=>v.ID!==id);DB.itensVenda=DB.itensVenda.filter(i=>i.VendaID!==id);saveLocal();renderVendas();toast('Venda excluída','success');}catch(e){toast('Erro: '+e.message,'error');}finally{hideLoading();}}
 
+// ===== DESPESAS =====
+function openModalDespesa(){
+  clearForm('desp');document.getElementById('modal-despesa-title').textContent='Nova Despesa';
+  document.getElementById('desp-data').value=today();
+  openModal('modal-despesa');
+}
+async function saveDespesa(){
+  const editId=document.getElementById('desp-id').value;
+  const obj={ID:editId||genId(),Data:document.getElementById('desp-data').value,Descricao:document.getElementById('desp-desc').value.trim(),Categoria:document.getElementById('desp-cat').value,Fornecedor:document.getElementById('desp-fornecedor').value.trim(),Valor:parseFloat(document.getElementById('desp-valor').value)||0,FormaPagamento:document.getElementById('desp-pagamento').value,Observacoes:document.getElementById('desp-obs').value.trim()};
+  if(!obj.Descricao){alert('Informe a descrição.');return;}
+  if(obj.Valor<=0){alert('Informe o valor.');return;}
+  showLoading();
+  try{if(isOnline()){if(editId)await api({action:'update',sheet:'Despesas'},obj);else await api({action:'add',sheet:'Despesas'},obj);}
+    const idx=DB.despesas.findIndex(d=>d.ID===obj.ID);if(idx>=0)DB.despesas[idx]=obj;else DB.despesas.push(obj);
+    saveLocal();closeModal('modal-despesa');clearForm('desp');renderDespesas();toast('Despesa salva','success');
+  }catch(e){toast('Erro: '+e.message,'error');}finally{hideLoading();}
+}
+function editDespesa(id){
+  const d=DB.despesas.find(x=>x.ID===id);if(!d)return;
+  document.getElementById('modal-despesa-title').textContent='Editar Despesa';
+  document.getElementById('desp-id').value=d.ID;
+  document.getElementById('desp-data').value=d.Data||'';
+  document.getElementById('desp-desc').value=d.Descricao||'';
+  document.getElementById('desp-cat').value=d.Categoria||'Outros';
+  document.getElementById('desp-fornecedor').value=d.Fornecedor||'';
+  document.getElementById('desp-valor').value=d.Valor||0;
+  document.getElementById('desp-pagamento').value=d.FormaPagamento||'Dinheiro';
+  document.getElementById('desp-obs').value=d.Observacoes||'';
+  openModal('modal-despesa');
+}
+async function delDespesa(id){if(!confirm('Excluir esta despesa?'))return;showLoading();try{if(isOnline())await api({action:'delete',sheet:'Despesas',id});DB.despesas=DB.despesas.filter(d=>d.ID!==id);saveLocal();renderDespesas();toast('Despesa excluída','success');}catch(e){toast('Erro: '+e.message,'error');}finally{hideLoading();}}
+
+function renderDespesas(){
+  const q=(document.getElementById('search-despesas').value||'').toLowerCase();
+  const catF=document.getElementById('filter-cat-desp').value;
+  const mesF=document.getElementById('filter-mes-desp').value;
+  // Populate month filter
+  const meses=[...new Set(DB.despesas.map(d=>String(d.Data||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const mesSelect=document.getElementById('filter-mes-desp');
+  const mesVal=mesSelect.value;
+  mesSelect.innerHTML='<option value="">Todos os Meses</option>'+meses.map(m=>{const[a,mm]=m.split('-');return`<option value="${m}"${m===mesVal?' selected':''}>${mm}/${a}</option>`;}).join('');
+
+  let data=[...DB.despesas];
+  if(catF)data=data.filter(d=>d.Categoria===catF);
+  if(mesF)data=data.filter(d=>String(d.Data||'').startsWith(mesF));
+  if(q)data=data.filter(d=>(d.Descricao||'').toLowerCase().includes(q)||(d.Fornecedor||'').toLowerCase().includes(q)||(d.Categoria||'').toLowerCase().includes(q));
+  data.sort((a,b)=>(b.Data||'').localeCompare(a.Data||''));
+
+  // Stats cards
+  const mesAtual=today().slice(0,7);
+  const despMes=DB.despesas.filter(d=>String(d.Data||'').startsWith(mesAtual));
+  const totalMes=despMes.reduce((s,d)=>s+Number(d.Valor||0),0);
+  const totalFiltro=data.reduce((s,d)=>s+Number(d.Valor||0),0);
+  const catTotals={};despMes.forEach(d=>{const cat=d.Categoria||'Outros';catTotals[cat]=(catTotals[cat]||0)+Number(d.Valor||0);});
+  const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('desp-stats').innerHTML=`
+    <div class="stat-card"><div class="label">Total do Mês</div><div class="value" style="color:var(--red)">R$ ${money(totalMes)}</div></div>
+    <div class="stat-card"><div class="label">Qtd no Mês</div><div class="value">${despMes.length}</div></div>
+    <div class="stat-card"><div class="label">Maior Categoria</div><div class="value" style="font-size:16px;">${topCat?topCat[0]:'—'}</div>${topCat?'<div style="color:var(--text2);font-size:12px;margin-top:2px;">R$ '+money(topCat[1])+'</div>':''}</div>
+    <div class="stat-card"><div class="label">Total Filtrado</div><div class="value" style="color:var(--orange)">R$ ${money(totalFiltro)}</div></div>`;
+
+  const tb=document.getElementById('tbody-despesas');
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" class="empty-state">Nenhuma despesa encontrada</td></tr>';return;}
+  tb.innerHTML=data.map(d=>`<tr><td>${formatDate(d.Data)}</td><td><strong>${esc(d.Descricao||'')}</strong>${d.Observacoes?'<br><span style="color:var(--text2);font-size:11px;">'+esc(d.Observacoes)+'</span>':''}</td><td>${esc(d.Categoria||'-')}</td><td>${esc(d.Fornecedor||'-')}</td><td>${esc(d.FormaPagamento||'-')}</td><td style="font-weight:600;color:var(--red);">R$ ${money(d.Valor)}</td><td class="actions"><button class="btn btn-ghost btn-sm" onclick="editDespesa('${d.ID}')">Editar</button><button class="btn btn-danger btn-sm" onclick="delDespesa('${d.ID}')">Excluir</button></td></tr>`).join('');
+}
+
 // ===== DASHBOARD =====
 function renderDashboard(){
   const osOrcamento=DB.ordens.filter(o=>o.Status==='Orçamento').length;
@@ -829,10 +933,13 @@ function renderDashboard(){
   const ultV=[...DB.vendas].sort((a,b)=>Number(b.Num||0)-Number(a.Num||0)).slice(0,5);
   document.getElementById('dash-vendas').innerHTML=ultV.length?ultV.map(v=>{const cli=DB.clientes.find(c=>c.ID===v.ClienteID);return`<div class="dash-list-item"><span>${esc(cli?cli.Nome:'-')}</span><span style="font-weight:600;">R$ ${money(v.Total)}</span></div>`;}).join(''):'<div class="empty-state" style="padding:20px;">Nenhuma venda</div>';
 
-  document.getElementById('dash-faturamento').innerHTML=`<div style="margin-bottom:10px;"><span style="color:var(--text2);font-size:12px;">Vendas</span><div style="font-size:22px;font-weight:700;color:var(--green);">R$ ${money(fatVendas)}</div></div><div><span style="color:var(--text2);font-size:12px;">Serviços (OS prontas)</span><div style="font-size:22px;font-weight:700;color:var(--accent);">R$ ${money(fatOS)}</div></div><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);"><span style="color:var(--text2);font-size:12px;">Total</span><div style="font-size:26px;font-weight:700;">R$ ${money(fatVendas+fatOS)}</div></div>`;
+  const despMes=DB.despesas.filter(d=>String(d.Data||'').startsWith(mesAtual));
+  const totalDesp=despMes.reduce((s,d)=>s+Number(d.Valor||0),0);
+
+  document.getElementById('dash-faturamento').innerHTML=`<div style="margin-bottom:10px;"><span style="color:var(--text2);font-size:12px;">Vendas</span><div style="font-size:22px;font-weight:700;color:var(--green);">R$ ${money(fatVendas)}</div></div><div><span style="color:var(--text2);font-size:12px;">Serviços (OS prontas)</span><div style="font-size:22px;font-weight:700;color:var(--accent);">R$ ${money(fatOS)}</div></div><div style="margin-top:8px;"><span style="color:var(--text2);font-size:12px;">Despesas do Mês</span><div style="font-size:22px;font-weight:700;color:var(--red);">- R$ ${money(totalDesp)}</div></div><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);"><span style="color:var(--text2);font-size:12px;">Lucro Estimado</span><div style="font-size:26px;font-weight:700;color:${(fatVendas+fatOS-totalDesp)>=0?'var(--green)':'var(--red)'};">R$ ${money(fatVendas+fatOS-totalDesp)}</div></div>`;
 }
 
-function clearForm(prefix){document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>{if(el.tagName==='INPUT')el.value=el.type==='number'?'0':'';if(el.tagName==='TEXTAREA')el.value='';if(el.tagName==='SELECT')el.selectedIndex=0;});if(prefix==='cli')document.getElementById('modal-cliente-title').textContent='Novo Cliente';}
+function clearForm(prefix){document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>{if(el.tagName==='INPUT')el.value=el.type==='number'?'0':'';if(el.tagName==='TEXTAREA')el.value='';if(el.tagName==='SELECT')el.selectedIndex=0;});if(prefix==='cli')document.getElementById('modal-cliente-title').textContent='Novo Cliente';if(prefix==='desp')document.getElementById('modal-despesa-title').textContent='Nova Despesa';}
 
 loadLocal();const savedUrl=getApiUrl();if(savedUrl){document.getElementById('api-url').value=savedUrl;syncAll();}else{renderDashboard();}
 </script>
